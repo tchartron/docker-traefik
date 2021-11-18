@@ -1,0 +1,27 @@
+http:
+  middlewares:
+    # auth:
+    #   basicAuth:
+    #     users:
+    #       - "admin:htpasswdencryptedpassword"
+    https-whitelist:
+      ipWhiteList:
+        sourceRange:
+          # - "192.168.0.0/24" #LAN
+          - "127.0.0.1/32" #localhost
+          - "172.0.0.0/8" #docker
+          # Add my public ip here !
+    https-redirect:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+tcp:
+  middlewares:
+    tcp-whitelist:
+      ipWhiteList:
+        sourceRange:
+          # - "192.168.0.0/24" #LAN
+          - "127.0.0.1/32" #localhost
+          - "172.0.0.0/8" #docker
+          # Add my public ip here !

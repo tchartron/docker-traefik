@@ -1,0 +1,84 @@
+version: '3.7'
+
+services:
+  traefik:
+    # image: traefik:${TRAEFIK_VERSION:-v2.5}
+    build:
+      context: .
+      dockerfile: ./traefik/Dockerfile
+      args:
+        - TRAEFIK_VERSION=${TRAEFIK_VERSION:-v2.5}
+    container_name: ${PROJECT_NAME:-app}_traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "3306:3306"
+      # - "8080:8080"
+    labels:
+      - traefik.enable=true
+      # Middlewares
+      # - traefik.http.middlewares.${PROJECT_NAME:-app}_https_middleware.redirectscheme.scheme=https
+      # - traefik.http.middlewares.${PROJECT_NAME:-app}_https_middleware.redirectscheme.permanent=true
+      # - traefik.http.middlewares.${PROJECT_NAME:-app}_whitelist.ipwhitelist.sourcerange=127.0.0.1/32,172.0.0.0/8
+      # # Router http
+      - traefik.http.routers.${PROJECT_NAME:-app}_traefik_http_router.entrypoints=http
+      - traefik.http.routers.${PROJECT_NAME:-app}_traefik_http_router.rule=Host(`traefik.${DOMAIN:-tchartron.com}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))
+      - traefik.http.routers.${PROJECT_NAME:-app}_traefik_http_router.middlewares=https-redirect@file
+      #HTTPS
+      # Routers https
+      - traefik.http.routers.${PROJECT_NAME:-app}_traefik_https_router.entrypoints=https
+      - traefik.http.routers.${PROJECT_NAME:-app}_traefik_https_router.rule=Host(`traefik.${DOMAIN:-tchartron.com}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))
+      - traefik.http.routers.${PROJECT_NAME:-app}_traefik_https_router.service=api@internal
+      - traefik.http.routers.${PROJECT_NAME:-app}_traefik_https_router.middlewares=https-whitelist@file
+      - traefik.http.routers.${PROJECT_NAME:-app}_traefik_https_router.tls=true
+      - traefik.http.routers.${PROJECT_NAME:-app}_traefik_https_router.tls.certresolver=letsencrypt
+      - traefik.http.routers.${PROJECT_NAME:-app}_traefik_https_router.tls.domains[0].main=traefik.${DOMAIN:-tchartron.com}
+    volumes:
+      - ./traefik/letsencrypt/acme.json:/letsencrypt/acme.json
+      - ./traefik/config/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./traefik/config/globals.yml:/etc/traefik/dynamic_conf/globals.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - default
+
+  portainer:
+    image: portainer/portainer-ce:${PORTAINER_VERSION:-latest}
+    container_name: ${PROJECT_NAME:-app}_portainer
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      # Middlewares
+      # - traefik.http.middlewares.${PROJECT_NAME:-app}_https_middleware.redirectscheme.scheme=https
+      # - traefik.http.middlewares.${PROJECT_NAME:-app}_https_middleware.redirectscheme.permanent=true
+      # - traefik.http.middlewares.${PROJECT_NAME:-app}_whitelist.ipwhitelist.sourcerange=127.0.0.1/32,172.0.0.0/8
+      # Router http
+      - traefik.http.routers.${PROJECT_NAME:-app}_portainer_http_router.entrypoints=http
+      - traefik.http.routers.${PROJECT_NAME:-app}_portainer_http_router.rule=Host(`portainer.${DOMAIN:-tchartron.com}`)
+      - traefik.http.routers.${PROJECT_NAME:-app}_portainer_http_router.middlewares=https-redirect@file
+      # Routers https
+      - traefik.http.routers.${PROJECT_NAME:-app}_portainer_https_router.entrypoints=https
+      - traefik.http.routers.${PROJECT_NAME:-app}_portainer_https_router.rule=Host(`portainer.${DOMAIN:-tchartron.com}`)
+      - traefik.http.routers.${PROJECT_NAME:-app}_portainer_https_router.middlewares=https-whitelist@file
+      - traefik.http.routers.${PROJECT_NAME:-app}_portainer_https_router.tls=true
+      - traefik.http.routers.${PROJECT_NAME:-app}_portainer_https_router.tls.certresolver=letsencrypt
+      - traefik.http.routers.${PROJECT_NAME:-app}_portainer_https_router.tls.domains[0].main=portainer.${DOMAIN:-tchartron.com}
+      - traefik.http.routers.${PROJECT_NAME:-app}_portainer_https_router.service=${PROJECT_NAME-app}_portainer_https_service
+      - traefik.http.services.${PROJECT_NAME:-app}_portainer_https_service.loadbalancer.server.port=9000
+    volumes:
+      - portainer_data:/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - default
+
+networks:
+  default:
+    name: ${NETWORK_PREFIX:-app}_network
+    driver: bridge
+    external: true
+
+#named volume instead of bind mounts
+volumes:
+  portainer_data:
+    driver: local
+    # external: true
