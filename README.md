@@ -1,4 +1,4 @@
-# traefik-2
+# traefik basic setup
 
 Main traefik proxy routing to all docker stacks on a machine using docker and file providers.  
 Handles letsencrypt TLS certificates.  
