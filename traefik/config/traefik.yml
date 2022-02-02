@@ -16,7 +16,7 @@ providers:
   docker:
     endpoint: "unix:///var/run/docker.sock"
     exposedByDefault: false
-    network: vinastic_network
+    network: app_network
   file:
     filename: /etc/traefik/dynamic_conf/globals.yml
 
